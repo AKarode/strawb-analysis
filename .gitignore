@@ -1,0 +1,44 @@
+# Datasets — downloaded on demand, not committed
+data/
+*.zip
+*.tar
+*.tar.gz
+
+# Model artifacts — large, trained locally
+models/
+runs/
+*.pt
+*.onnx
+*.hef
+*.har
+*.ncnn.bin
+*.ncnn.param
+
+# Outputs
+reports/
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+.env.*
+*.egg-info/
+dist/
+build/
+.ipynb_checkpoints/
+
+# Session / tooling state
+.remember/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

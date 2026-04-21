@@ -86,41 +86,41 @@ Explicitly excluded. Documented to prevent scope creep.
 
 ## Traceability
 
-Will be populated by roadmap creation.
+Populated by roadmap creation on 2026-04-20.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | TBD | Pending |
-| DATA-02 | TBD | Pending |
-| DATA-03 | TBD | Pending |
-| DATA-04 | TBD | Pending |
-| DETECT-01 | TBD | Pending |
-| DETECT-02 | TBD | Pending |
-| DETECT-03 | TBD | Pending |
-| DETECT-04 | TBD | Pending |
-| DISEASE-01 | TBD | Pending |
-| DISEASE-02 | TBD | Pending |
-| DISEASE-03 | TBD | Pending |
-| DISEASE-04 | TBD | Pending |
-| PIPE-01 | TBD | Pending |
-| PIPE-02 | TBD | Pending |
-| PIPE-03 | TBD | Pending |
-| PIPE-04 | TBD | Pending |
-| PIPE-05 | TBD | Pending |
-| PIPE-06 | TBD | Pending |
-| HAILO-01 | TBD | Pending |
-| HAILO-02 | TBD | Pending |
-| HAILO-03 | TBD | Pending |
-| HAILO-04 | TBD | Pending |
-| EVAL-01 | TBD | Pending |
-| EVAL-02 | TBD | Pending |
-| EVAL-03 | TBD | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DETECT-01 | Phase 2 | Pending |
+| DETECT-02 | Phase 2 | Pending |
+| DETECT-03 | Phase 2 | Pending |
+| DETECT-04 | Phase 2 | Pending |
+| DISEASE-01 | Phase 3 | Pending |
+| DISEASE-02 | Phase 3 | Pending |
+| DISEASE-03 | Phase 3 | Pending |
+| DISEASE-04 | Phase 3 | Pending |
+| PIPE-01 | Phase 4 | Pending |
+| PIPE-02 | Phase 4 | Pending |
+| PIPE-03 | Phase 4 | Pending |
+| PIPE-04 | Phase 4 | Pending |
+| PIPE-05 | Phase 4 | Pending |
+| PIPE-06 | Phase 4 | Pending |
+| HAILO-01 | Phase 5 | Pending |
+| HAILO-02 | Phase 5 | Pending |
+| HAILO-03 | Phase 5 | Pending |
+| HAILO-04 | Phase 5 | Pending |
+| EVAL-01 | Phase 4 | Pending |
+| EVAL-02 | Phase 4 | Pending |
+| EVAL-03 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 25 ⚠️ (to be resolved by roadmapper)
+- Mapped to phases: 25 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-20*
-*Last updated: 2026-04-20 after initial definition*
+*Last updated: 2026-04-20 (traceability populated by roadmapper)*
