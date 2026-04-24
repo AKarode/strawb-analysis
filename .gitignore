@@ -1,5 +1,8 @@
-# Datasets — downloaded on demand, not committed
-data/
+# Datasets — downloaded on demand, not committed.
+# Rules are glob-style so negations can re-include LICENSE.md under ignored trees.
+data/**
+!data/**/
+!data/**/LICENSE.md
 *.zip
 *.tar
 *.tar.gz
@@ -13,9 +16,11 @@ runs/
 *.har
 *.ncnn.bin
 *.ncnn.param
+*_ncnn_model/
 
 # Outputs
-reports/
+reports/**
+!reports/.gitkeep
 *.csv
 
 # Python
@@ -33,6 +38,7 @@ build/
 
 # Session / tooling state
 .remember/
+.claude/
 
 # OS
 .DS_Store
