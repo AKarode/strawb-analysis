@@ -90,7 +90,7 @@ Every dataset directory has a `LICENSE.md` recording its source license — need
 
 | # | Phase | Status |
 |---|---|---|
-| 1 | Data Prep & Scaffolding | **In progress** — skeleton + manifest library + per-source LICENSEs done, MANIFEST.json + disease crops outstanding |
+| 1 | Data Prep & Scaffolding | **In progress** — skeleton + manifest library + per-source LICENSEs + `data/MANIFEST.json` (20,313 entries across 7 sources) done; dedup audit + disease crops outstanding |
 | 2 | Detection Model — YOLO26n on Zenodo | Not started |
 | 3 | Disease Classification — YOLO26n-cls + native healthy class | Not started |
 | 4 | Integrated CPU Pipeline + Evaluator | Not started |
@@ -141,7 +141,7 @@ Captured in full in `.planning/PROJECT.md`. Highlights:
 
 ## Status snapshot
 
-Phase 1, plan 2 of 3 in flight. Manifest library + dedup audit script written; `data/MANIFEST.json` not yet generated end-to-end (see macOS gotcha above). See `.planning/STATE.md` for the live picture.
+Phase 1 dataset acquisition complete. All 7 sources downloaded on the Pi (zenodo, kaggle_afzaal, osf_ej5qv, roboflow ×3, strawdi); `data/MANIFEST.json` populated end-to-end at 20,313 entries. Remaining Phase 1 deliverables: cross-source dedup audit and per-polygon disease crop generation. See `.planning/STATE.md` for the live picture.
 
 ## License
 

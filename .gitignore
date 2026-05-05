@@ -23,6 +23,9 @@ reports/**
 !reports/.gitkeep
 *.csv
 
+# Runtime logs (Hailo PCIe driver writes hailort.log into cwd on the Pi)
+hailort.log
+
 # Python
 __pycache__/
 *.py[cod]
