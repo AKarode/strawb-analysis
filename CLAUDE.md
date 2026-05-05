@@ -2,9 +2,15 @@
 
 Claude Code guidance for this project. Read `.planning/PROJECT.md` for full context.
 
+This repo is **dual-machine**. The Mac dev workstation (this side) authors code and exported model artifacts; a Raspberry Pi 5 with the **AI HAT+ 2 (Hailo-10H, 40 TOPS)** executes inference and benchmarks. Pi-side AI agents (Cursor on the Pi, accessed via Raspberry Pi Connect — no SSH) read `AGENTS.md` for their role boundary, setup steps, and command surface. Don't propose SSH-driven workflows from this side — Pi-side execution is owned by the Pi-side agent.
+
+The repo is **public** on GitHub at `AKarode/strawb-analysis`. Pi-side clones use plain HTTPS — no deploy keys, no PATs.
+
+> **Hardware note:** Earlier planning docs (`.planning/PROJECT.md`, `.planning/REQUIREMENTS.md`) say "Hailo-8 / original AI HAT+." This was superseded by on-device inspection in April 2026 — the actual hardware is Hailo-10H / AI HAT+ 2. The planning docs preserve the old decision intentionally as a record of the change. **`README.md` is the source of truth for hardware.** Toolchain implications: Hailo-10H uses a newer DFC and has a sparser model zoo as of 2026; the YOLO11n fallback that worked on Hailo-8 may not transfer cleanly.
+
 ## Project
 
-**Strawberry Vision Pi** — offline Raspberry Pi 5 computer-vision pipeline that batch-processes 500–1000 stored RGB strawberry field images and emits a per-image CSV report (presence, count, ripeness, disease) plus a ground-truth accuracy comparison. Two required backends: Pi 5 CPU (NCNN) and Pi 5 + Hailo AI HAT+ (Hailo-8 HEF).
+**Strawberry Vision Pi** — offline Raspberry Pi 5 computer-vision pipeline that batch-processes 500–1000 stored RGB strawberry field images and emits a per-image CSV report (presence, count, ripeness, disease) plus a ground-truth accuracy comparison. Two required backends: Pi 5 CPU (NCNN) and Pi 5 + Hailo AI HAT+ 2 (Hailo-10H HEF).
 
 **Not** an LLM project. **Not** multispectral. **Not** streaming / real-time.
 
@@ -34,8 +40,8 @@ This project uses the GSD planning workflow. Planning artifacts live under `.pla
 - **CPU runtime**: NCNN FP32 @ 640×640 — Pi 5 benchmark is 67.69 ms/image for YOLO26n. Do NOT attempt INT8 on NCNN — not viable on Pi 5 as of April 2026.
 - **Pipeline**: Two-stage — detect (YOLO26n) → crop each fruit → classify disease (YOLO26n-cls). Datasets cannot be merged into a unified seg model (no image overlap, incompatible label schemas).
 - **Disease class**: 7 Kaggle disease classes + synthesized `healthy` class (sampled from non-diseased Zenodo fruits). Classifier must have a null option.
-- **Hardware**: Original Raspberry Pi AI HAT+ (Hailo-8, 26 TOPS). **Not** AI HAT+ 2 (Hailo-10H, 40 TOPS — LLM-targeted, irrelevant here).
-- **Hailo stopgap**: YOLO26 Hailo official support is April 2026. If the detector's HEF conversion isn't ready, Phase 5 falls back to YOLO11n for the Hailo detection path (last Hailo Model Zoo-supported YOLO).
+- **Hardware**: Raspberry Pi 5 + AI HAT+ 2 (Hailo-10H, 40 TOPS). Confirmed via on-device inspection April 2026 — supersedes earlier "Hailo-8" entries in `.planning/`. Access via Raspberry Pi Connect (no SSH).
+- **Hailo stopgap**: YOLO26 Hailo official support is April 2026. If the detector's HEF conversion isn't ready, Phase 5 falls back to YOLO11n. Note: the Hailo-10H model zoo is sparser than Hailo-8's, so the fallback may need its own DFC pass rather than a pre-built HEF.
 - **Baseline to beat**: BrunoKreiner's 92–93% mAP50 on the same Kaggle disease dataset (YOLOv8-XL instance segmentation, 2023). Our classifier target: ≥ 90% top-1.
 
 ## Repo Layout

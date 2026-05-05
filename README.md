@@ -145,4 +145,13 @@ Phase 1, plan 2 of 3 in flight. Manifest library + dedup audit script written; `
 
 ## License
 
-Private. Not for redistribution.
+Source code is MIT licensed (see [`LICENSE`](LICENSE)).
+
+Datasets under `data/` and any model weights derived from them are governed by their own upstream licenses — see each `data/<source>/LICENSE.md`. The MIT grant covers this repo's source only; it does not relicense third-party data or models.
+
+## Acknowledgements
+
+- Strawberry detection dataset from Zenodo (Afzaal et al.) — see `data/zenodo/LICENSE.md`.
+- Strawberry disease classification dataset from Kaggle — see `data/disease/LICENSE.md`.
+- Baseline reference: BrunoKreiner's YOLOv8-XL instance-segmentation work on the Kaggle disease dataset (~92–93 % mAP50, 2023).
+- Built with [Ultralytics YOLO26](https://docs.ultralytics.com), [NCNN](https://github.com/Tencent/ncnn), and [Hailo Dataflow Compiler](https://hailo.ai/developer-zone/).
