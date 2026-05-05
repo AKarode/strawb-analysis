@@ -1,0 +1,9 @@
+# Strawberry Vision Pi — Phase 1 dependencies.
+#
+# Phase 1 (dataset audit + manifest scanning) needs only Pillow and PyYAML
+# beyond the standard library. Heavier deps (ultralytics, torch, ncnn,
+# opencv-python, pandas, hailo-platform) are deferred to the phase that
+# actually imports them so we don't fight Python 3.13 / aarch64 wheel
+# availability before we have to.
+Pillow
+PyYAML

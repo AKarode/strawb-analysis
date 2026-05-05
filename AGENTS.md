@@ -45,8 +45,11 @@ If it reports HAILO8 or fails, stop and surface to the user — something is mis
 ### 1. Clone the repo (public, HTTPS — no auth needed)
 
 ```bash
-git clone https://github.com/AKarode/strawb-analysis.git
-cd strawb-analysis
+# Use existing clone if one already exists on this Pi; otherwise clone fresh.
+# Current canonical path on the project Pi is /home/anand/adit/strawb-analysis;
+# any path under your home directory is fine for a new clone.
+git clone https://github.com/AKarode/strawb-analysis.git ~/strawb-analysis
+cd ~/strawb-analysis    # or cd /home/anand/adit/strawb-analysis if reusing
 ```
 
 If the user later switches to write-back from the Pi (committing benchmark results), they'll set up a separate write-scoped credential. Read-only HTTPS is the default flow.
@@ -57,8 +60,10 @@ If the user later switches to write-back from the Pi (committing benchmark resul
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt   # NOTE: may not exist yet — Phase 1 deliverable
+pip install -r requirements.txt
 ```
+
+Note on Python 3.13: the Pi ships Python 3.13 by default. Phase 1 deps (`Pillow`, `PyYAML`) have aarch64 / 3.13 wheels and install cleanly. Heavier deps land in later phases (`ultralytics`, `torch`, `ncnn`, `opencv-python`, `pandas`, `hailo-platform`); if any of those have no 3.13 / aarch64 wheel when we get there, fall back to Python 3.11 in a separate venv rather than building from source on the Pi.
 
 ### 3. Hailo runtime (only after hardware is confirmed)
 

@@ -10,11 +10,18 @@ You are the *Pi-side* agent. Your role is execution-only: you run things on the 
 
 ## Step 1 — Read the contract
 
-Clone the repo (anywhere on the Pi, `~/strawb-analysis` is fine) and read `AGENTS.md` at the repo root in full. It defines your role, what you may and may not do, the hardware, the setup steps, the daily flow, and the reporting format. Treat it as a hard contract. If anything in it conflicts with this prompt, AGENTS.md wins.
+Find or clone the repo and read `AGENTS.md` at its root in full. It defines your role, what you may and may not do, the hardware, the setup steps, the daily flow, and the reporting format. Treat it as a hard contract. If anything in it conflicts with this prompt, AGENTS.md wins.
 
 ```bash
-git clone https://github.com/AKarode/strawb-analysis.git ~/strawb-analysis
-cd ~/strawb-analysis
+# If a clone already exists on this Pi (the project Pi typically has it at
+# /home/anand/adit/strawb-analysis), use that. Otherwise clone fresh.
+REPO=$(find / -maxdepth 6 -type d -name strawb-analysis 2>/dev/null | head -1)
+if [ -z "$REPO" ]; then
+  git clone https://github.com/AKarode/strawb-analysis.git ~/strawb-analysis
+  REPO=~/strawb-analysis
+fi
+cd "$REPO"
+git pull --ff-only
 cat AGENTS.md
 ```
 
