@@ -28,18 +28,18 @@ This project uses the GSD planning workflow. Planning artifacts live under `.pla
 **Phase sequence:**
 1. Data Prep & Scaffolding (DATA-01..04)
 2. Detection Model — YOLO26n on Zenodo (DETECT-01..04)
-3. Disease Classification Model — YOLO26n-cls on Kaggle crops + synthesized `healthy` (DISEASE-01..04)
+3. Disease Classification Model — YOLO26n-cls on Kaggle crops + native `healthy_fruit` from Roboflow research-proj-disease (DISEASE-01..04)
 4. Integrated CPU Pipeline + Evaluator (PIPE-01..06, EVAL-01..03)
 5. Hailo Backend Port (HAILO-01..04)
 
-**Next command:** `/gsd-plan-phase 1`
+**Current state (2026-05-05):** Phase 1 in progress. `data/MANIFEST.json` populated at 20,313 entries on the Pi; Phase 2 trainer + Colab notebook ready (`notebooks/train_detect_colab.ipynb`). Outstanding Phase 1 items: dedup audit, disease crops. See `.planning/STATE.md` for the live picture.
 
 ## Key Technical Decisions (from PROJECT.md)
 
 - **Framework**: Ultralytics YOLO26 (released Jan 14, 2026) — NOT YOLOv12 (Ultralytics flags v12 as research-only; training instability).
 - **CPU runtime**: NCNN FP32 @ 640×640 — Pi 5 benchmark is 67.69 ms/image for YOLO26n. Do NOT attempt INT8 on NCNN — not viable on Pi 5 as of April 2026.
 - **Pipeline**: Two-stage — detect (YOLO26n) → crop each fruit → classify disease (YOLO26n-cls). Datasets cannot be merged into a unified seg model (no image overlap, incompatible label schemas).
-- **Disease class**: 7 Kaggle disease classes + synthesized `healthy` class (sampled from non-diseased Zenodo fruits). Classifier must have a null option.
+- **Disease class**: 7 Kaggle disease classes + native `healthy_fruit` from Roboflow research-proj-disease (originally planned to synthesize healthy crops from Zenodo non-diseased fruits — superseded; native source is cleaner). Classifier must have a null option.
 - **Hardware**: Raspberry Pi 5 + AI HAT+ 2 (Hailo-10H, 40 TOPS). Confirmed via on-device inspection April 2026 — supersedes earlier "Hailo-8" entries in `.planning/`. Access via Raspberry Pi Connect (no SSH).
 - **Hailo stopgap**: YOLO26 Hailo official support is April 2026. If the detector's HEF conversion isn't ready, Phase 5 falls back to YOLO11n. Note: the Hailo-10H model zoo is sparser than Hailo-8's, so the fallback may need its own DFC pass rather than a pre-built HEF.
 - **Baseline to beat**: BrunoKreiner's 92–93% mAP50 on the same Kaggle disease dataset (YOLOv8-XL instance segmentation, 2023). Our classifier target: ≥ 90% top-1.
@@ -47,18 +47,24 @@ This project uses the GSD planning workflow. Planning artifacts live under `.pla
 ## Repo Layout
 
 ```
-data/              # Downloaded datasets (gitignored). Zenodo + Kaggle under data/{zenodo,disease}/
+data/              # Downloaded datasets (gitignored, Pi-resident). 7 sources under data/{zenodo,disease,osf-ej5qv,roboflow/*,strawdi}/
 models/            # Trained weights + exports (gitignored). detect/ and disease/
-scripts/           # Training + conversion scripts
-src/               # Library code: backends, pipeline, evaluator
+scripts/           # Training + conversion scripts (build_manifest.py, train_detect.py, ...)
+notebooks/         # Colab training notebooks (train_detect_colab.ipynb)
+src/               # Library code: manifest, backends, pipeline, evaluator
 reports/           # CSV + training reports (gitignored)
+docs/              # Session logs + Cursor bootstrap prompts
 .planning/         # GSD workflow artifacts (committed)
-agri-project-goals.docx  # Original client spec (reference)
+AGENTS.md          # Pi-side agent contract (Cursor execution role)
 ```
 
 ## Running
 
-Training happens on dev workstation / Colab. Inference runs on Pi 5. See phase plans for specifics.
+Training happens on Colab (recommended) or Mac MPS. Inference runs on Pi 5.
+
+- **Detection training (Phase 2)**: open `notebooks/train_detect_colab.ipynb` directly in Colab via https://colab.research.google.com/github/AKarode/strawb-analysis/blob/master/notebooks/train_detect_colab.ipynb. Trains yolo26n (production) + yolo26s (ablation upper-bound) and writes `best.pt` to Drive.
+- **Local smoke test**: `python scripts/smoke_test_yolo26.py` (requires ultralytics + a Zenodo sample on disk).
+- **Pi-side execution**: read `AGENTS.md`. Cursor on the Pi handles execution; Mac side authors only.
 
 ## Brand / Repo Context
 
