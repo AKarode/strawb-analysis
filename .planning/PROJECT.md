@@ -49,7 +49,7 @@ A single-command batch inference tool that processes 500–1000 field images on 
 **Technology landscape (April 2026):**
 - **YOLO26** released Jan 14, 2026 — Ultralytics' current edge-optimized production flagship. No DFL, no NMS, native end-to-end. Official Ultralytics recommendation for edge/CPU over YOLOv12 (which has training instability and slower CPU throughput).
 - **YOLO11** is the most recent version with full Hailo Model Zoo support; YOLO26 Hailo official support is arriving April 2026 (per Ultralytics discussion #23655). Community pipeline exists at [DanielDubinsky/yolo26_hailo](https://github.com/DanielDubinsky/yolo26_hailo).
-- **Pi 5 + NCNN benchmarks** (from Ultralytics RPi guide): YOLO26n FP32 = 67.69 ms/image @ 640×640, ~15% faster than YOLO11n. Projected 1000-image batch: ~68 seconds on CPU alone.
+- **Pi 5 + NCNN benchmarks** — Ultralytics' published RPi guide reports 67.69 ms/image FP32 @ 640×640. **This number was not reproducible on our Pi 5 (May 2026)**: `yolo benchmark` with ultralytics 8.4.48 reports 183.73 ms/image NCNN inference time on yolo26n_zenodo. The model itself is healthy (mAP50 0.679, 4-thread NCNN with all FP16 + winograd + packing flags on, no throttling). Suspect causes of the gap: ultralytics version delta, RPi firmware, or Cursor agent (~25% CPU) running on the same box during measurement. Empirical operating budget: ~184 ms inference + ~200 ms decode of 8 MB / 4000×3000 source JPEGs = ~390 ms full predict pipeline per image. Detector throughput on 1000 images ≈ 6.5 min, well under the 30-min batch budget.
 
 **Client input capture profile (from WhatsApp):**
 - 500–1000 stored RGB images per run
