@@ -1,29 +1,29 @@
 # State: Strawberry Vision Pi
 
 **Initialized:** 2026-04-20
-**Last Updated:** 2026-05-09
+**Last Updated:** 2026-05-11
 
 ## Project Reference
 
 - **Project:** Strawberry Vision Pi — Edge Inference Pipeline
 - **Core Value:** Single-command batch inference tool that processes 500–1000 field images on a Raspberry Pi within the 30-minute budget, emitting a per-image CSV that lets the client directly compare predictions against annotated ground truth.
-- **Current Focus:** Phase 2 functional validation — yolo26n trained on Zenodo, NCNN-exported, awaiting Pi-side benchmark.
+- **Current Focus:** Phase 3 → Phase 4 handoff — disease classifier trained, test-eval verified, NCNN-exported, awaiting release packaging + Pi-side bench.
 - **Granularity:** coarse
 - **Mode:** yolo
 - **Model Profile:** quality
 
 ## Current Position
 
-- **Phase:** 2 (Detection Model) — **functionally validated.** Empirical NCNN throughput captured on Pi 5; ready for Phase 3.
-- **Plan:** Phase 1 plans 01-01/02 complete; 01-03 (disease crops) + dedup audit still open. Phase 2 trained `yolo26n` on Zenodo via Colab (notebook `notebooks/train_detect_colab.ipynb`); NCNN export landed Mac-side; weights + bundle published as GitHub Release `v0.2.0-detect`; Pi-side bench captured in `reports/detect_ncnn_bench.md`.
-- **Status:** Phase 2 done. Detector loads, runs on Pi, produces 3-class detections. Throughput is 184 ms inference / ~390 ms full pipeline per image — slower than Ultralytics' published 67.69 ms benchmark but still meets the 30-min/1000-image batch budget (~6.5 min for detection alone).
-- **Progress:** 0/5 phases formally complete (Phase 1 ~70%, Phase 2 ~95% — open Phase 1 backfill items don't block Phase 3 start)
+- **Phase:** 3 (Disease Classifier) — **trained + test-eval verified + NCNN-exported.** Ready for release packaging and Pi-side bench.
+- **Plan:** Phase 1 plans 01-01/02 complete; 01-03 (disease crops) + dedup audit still open. Phase 2 trained `yolo26n` on Zenodo via Colab; NCNN export Mac-side; release `v0.2.0-detect`; Pi-side bench in `reports/detect_ncnn_bench.md`. Phase 3 trained `yolo26n-cls` on Colab A100 (8-class crops: Kaggle Afzaal × 7 disease + Roboflow research-proj × 1 healthy), test-set eval re-verified Mac-side via `scripts/eval_disease_test.py`, NCNN bundle produced and parity-checked vs PyTorch (identical top-1).
+- **Status:** Phase 3 done pending release. Classifier achieves 98.9% val top-1 / **93.86% test top-1 (7-class, healthy not in this eval split)** vs ≥90% target. NCNN export FP32 @ 224×224 produced at `models/disease/yolo26n_cls_ncnn_model/` (5.9 MB bin); NCNN inference matches PyTorch top-1 exactly on the 1416-crop test set.
+- **Progress:** 0/5 phases formally complete (Phase 1 ~70%, Phase 2 ~95%, Phase 3 ~90% — pending release + Pi bench)
 
 ```
 [~] Phase 1  Data Prep & Scaffolding           (~70% — dedup audit outstanding; build_disease_crops landed)
 [✓] Phase 2  Detection Model                   (trained, exported, Pi-validated; baseline-revised)
-[~] Phase 3  Disease Classification Model      (training notebook + bench scripts ready; awaiting Colab run + release)
-[~] Phase 4  Integrated CPU Pipeline + Evaluator (scaffolded; runnable once cls NCNN lands)
+[~] Phase 3  Disease Classification Model      (~90% — trained, test-verified, NCNN-exported; awaiting release + Pi bench)
+[~] Phase 4  Integrated CPU Pipeline + Evaluator (scaffolded; runnable once cls NCNN lands on Pi)
 [ ] Phase 5  Hailo Backend Port                (research flag — see note)
 ```
 
@@ -40,6 +40,49 @@
 System notes during bench: 4 cores at 2.4 GHz, governor `ondemand` ramped to max under load, `0x80000` throttle bit was historical (sticky), no active throttling, temp 67–72 °C. Cursor agent on same box consumed ~25% CPU.
 
 **Conclusion**: 67.69 ms baseline is unreproducible in our environment (likely ultralytics version delta, vendor benchmark conditions, or the Cursor co-tenant). Empirical 184 ms is the real number. 30-min batch budget still holds with margin.
+
+## Phase 3 disease classifier — training + test eval (2026-05-11)
+
+Trained on Colab A100, 8-class crops (kaggle test crops only excludes `healthy`).
+
+| Run | Epochs (es) | Best ep | val top-1 | val top-5 | params |
+|---|---|---|---|---|---|
+| yolo26n-cls (production, 50ep config) | 51 | 37 | **0.9898** | 1.0000 | 1.54M |
+| yolo26n-cls (rerun, 100ep config)     | 60 | 45 | **0.989**  | 1.0000 | 1.54M |
+| yolo26s-cls (ablation) | — | — | (not run) | — | — |
+
+Notebook output drift: the rerun wrote to `disease_yolo26n_cls-2/` in Drive because the original dir existed. Cell 22 / cell 26 read the un-suffixed path, so the downloaded `best.pt` corresponds to the **first 50-ep run**. Both runs converged to ≈98.9% top-1 — the difference is noise; downloaded weights are fine.
+
+### Mac-side test eval (Kaggle test split, 1416 crops, 7 disease classes — `healthy` not in this eval split)
+
+`scripts/eval_disease_test.py --weights models/disease/yolo26n_cls.pt --split test`
+
+| | Overall top-1 | Overall top-5 | Throughput |
+|---|---|---|---|
+| PyTorch FP32 (MPS) | **0.9386** | 0.9993 | 103 img/s |
+| NCNN FP32 (CPU) | **0.9386** | 0.9986 | 184 img/s (Mac) |
+
+Per-class top-1 on test:
+
+| Class | n | top-1 | dominant leak |
+|---|---|---|---|
+| blossom_blight | 70 | 1.0000 | — |
+| gray_mold | 158 | 1.0000 | — |
+| powdery_mildew_leaf | 343 | 0.9913 | — |
+| leaf_spot | 478 | 0.9226 | → angular_leafspot (2.7%) |
+| anthracnose_fruit_rot | 58 | 0.8966 | → powdery_mildew_fruit (6.9%) |
+| powdery_mildew_fruit | 116 | 0.8879 | → gray_mold (8.6%) |
+| angular_leafspot | 193 | 0.8549 | → gray_mold (5.7%) |
+
+Val→test gap of ~5 pts reveals real failure modes that the val confusion matrix hid: angular_leafspot vs gray_mold, leaf_spot vs angular_leafspot, fungal-fruit cross-confusion. Overall still above the ≥90% target and within range of the BrunoKreiner 92–93% mAP50 baseline (different metric — segmentation vs cls — so not a 1:1 comparison).
+
+NCNN parity: identical top-1 to PyTorch; top-5 drifts by one borderline sample (0.9986 vs 0.9993). Export is clean.
+
+Artifacts:
+- `models/disease/yolo26n_cls.pt` (3.2 MB)
+- `models/disease/yolo26n_cls_ncnn_model/` (5.9 MB bin + param + metadata.yaml, FP32 @ 224)
+- `reports/disease_test_eval.{csv,json}` (PT)
+- `reports/disease_test_eval_ncnn.{csv,json}` (NCNN parity)
 
 ## Phase 2 training summary (2026-05-09)
 
@@ -112,6 +155,8 @@ None.
 
 ### Last Session Summary
 
+2026-05-11 — Phase 3 closed Mac-side. Colab training completed (see notebook output in `~/Downloads/train_disease_colab.ipynb`); `best.pt` placed at `models/disease/yolo26n_cls.pt`. Authored `scripts/eval_disease_test.py` (per-image CSV + summary JSON, force task=classify so NCNN bundles load as classifiers not detectors). Ran test eval on 1416 Kaggle test crops (7 classes — healthy excluded since Roboflow key wasn't on Mac): **93.86% top-1, 99.93% top-5**. NCNN export via existing `scripts/export_cls_ncnn.py`; re-eval on NCNN bundle confirmed identical top-1 (PT vs NCNN parity check). Reports landed at `reports/disease_test_eval{,_ncnn}.{csv,json}`. Next: package release `v0.3.0-disease` and dispatch Pi-side bench via Cursor megaprompt.
+
 2026-05-09 (evening) — Phase 3 + 4 scaffolded. Authored: `scripts/build_disease_crops.py` (8-class crop generator from Kaggle Afzaal LabelMe polygons + Roboflow research-proj-disease `Healthy Fruit` bboxes), `scripts/train_disease.py` (yolo26n-cls trainer mirroring train_detect.py), `notebooks/train_disease_colab.ipynb` (clone of detect notebook with Kaggle+Roboflow auth + crop generation + training), `scripts/export_cls_ncnn.py` and `scripts/bench_cls_ncnn.py` (cls counterparts to the detect scripts; cls bench computes per-class top-1 accuracy in addition to latency), `src/run_inference.py` (Phase 4 CPU pipeline: detector → per-fruit crop → classifier → CSV with per-image counts and disease set), `src/evaluator.py` (Phase 4 count-accuracy MAE/exact-match/pearson vs Zenodo ground truth), `docs/cursor-phase3-cls-bench.md` (Pi-side megaprompt). Release tagging for Phase 3 mirrors Phase 2: weights + val crops bundle to `v0.3.0-disease`.
 
 2026-05-09 (afternoon) — Phase 2 functionally validated on Pi. Pulled `bench_detect_ncnn.py` from PR #1 merge, ran end-to-end. Initial result was 4.7× the published 67.69 ms baseline; investigation ruled out governor (cores already at 2.4 GHz under ondemand), thread count (NCNN already on 4 with all FP16 + winograd + packing on), and pre/post overhead (only ~12 ms each via `Results.speed`). Wall-clock gap was JPEG decode of 8 MB / 4000×3000 source frames (~190 ms). `yolo benchmark` (the same methodology behind 67.69) on this Pi reports 183.73 ms — confirming the published number is unreproducible in our environment. Updated PROJECT.md and STATE.md with empirical baseline. 30-min/1000-image batch budget holds with margin (~6.5 min detector + ~4 min classifier projected).
@@ -124,8 +169,8 @@ None.
 
 ### Next Actions
 
-1. **Phase 3 (disease classifier) — Colab training is now ready to run**. Open `notebooks/train_disease_colab.ipynb` directly in Colab via https://colab.research.google.com/github/AKarode/strawb-analysis/blob/master/notebooks/train_disease_colab.ipynb. The notebook auths Kaggle + Roboflow, downloads the source datasets, runs `scripts/build_disease_crops.py` to produce the 8-class training set, and trains both `yolo26n-cls` (production) and optionally `yolo26s-cls` (ablation). Target: ≥ 90% top-1 on val.
-2. **Mac side after training completes**: copy `best.pt` to `models/disease/yolo26n_cls.pt`, run `python scripts/export_cls_ncnn.py --weights models/disease/yolo26n_cls.pt`, publish as GitHub Release `v0.3.0-disease` (also include `data/disease_crops/val.tar.gz` so the Pi can measure top-1 in its bench).
+1. **Package release `v0.3.0-disease`**: bundle `models/disease/yolo26n_cls.pt` + tarball of `models/disease/yolo26n_cls_ncnn_model/` + `data/disease_crops/test.tar.gz` (Pi needs the eval crops to measure top-1 on-device). Publish via `gh release create v0.3.0-disease ...` mirroring Phase 2.
+2. **(Optional but recommended) 8-class test eval with `healthy`**: re-run `scripts/eval_disease_test.py` with the Roboflow `healthy` crops included. Requires `ROBOFLOW_API_KEY`; either re-add Roboflow's `research-proj-disease` v1 to `data/roboflow/research-proj-disease/`, run `python scripts/build_disease_crops.py` (without `--skip-roboflow`), then re-run eval. Confirms the val 97% healthy holds on test.
 3. **Pi side after release is published**: paste `docs/cursor-phase3-cls-bench.md` to bench the cls model and report.
 4. **Phase 4 (integrated pipeline)**: `src/run_inference.py` and `src/evaluator.py` are scaffolded and ready. Once both detector + classifier NCNN bundles are on the Pi, the full pipeline runs as `python -m src.run_inference --backend cpu --images ... --detector ... --classifier ... --out reports/inference_cpu.csv`, then `python -m src.evaluator --predictions ... --ground-truth-images data/zenodo/strawberries/validation --out reports/eval_cpu.json`.
 5. **Phase 1 backfill (lower priority)**: `scripts/dedup_audit.py` — emits `reports/dedup-report.md`. Not blocking Phase 3 or 4.
