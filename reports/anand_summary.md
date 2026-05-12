@@ -4,18 +4,26 @@ Pi 5 (4 cores @ 2.4 GHz) + AI HAT+ 2 (Hailo-10H accelerator present but **not us
 
 ## Headline
 
-**An offline batch of 1,000 strawberry field images is projected to process in ~8 minutes — 3.75× under the 30-minute target — at 93.2% disease-classification accuracy and 91.7% mAP50 on ripe-fruit detection.**
+**Measured: a 1,000-image batch runs in 5.1 minutes on Pi 5 CPU-only — 5.8× under the 30-minute target — at 93.2% disease-classification accuracy and 91.7% mAP50 on ripe-fruit detection.**
 
-## Speed (Pi 5, NCNN, CPU-only)
+## Speed — real 1,000-image batch
 
-| Stage | Mean per image | p95 | Notes |
-|---|---|---|---|
-| Detect (find fruit + peduncle) | 286 ms | 423 ms | YOLO26n @ 640×640 |
-| Classify (disease per fruit) | 47.8 ms | 107 ms | Runs ~4.2× per image (one per fruit) on 224×224 crops; per-call 12.9 ms |
-| **End-to-end per image** | **479 ms** | **679 ms** | full pipeline incl. I/O |
-| **1,000-image batch (projected)** | **~8 minutes** | — | linear extrapolation from 159-image measured run (76.1s wall) |
+Measured on 1,000 strawberry field images (813 Zenodo + 187 Roboflow matt-lucky) processed end-to-end through detector → crop → classifier → CSV.
 
-Headroom: the Hailo accelerator on the AI HAT+ 2 is unused in these numbers. Once the Hailo path is finished (Phase 5), per-image inference is expected to drop 5-10×, giving even more margin for higher input resolution or larger model sizes if accuracy needs to climb further.
+| | Mean per image | p50 | p95 | Notes |
+|---|---|---|---|---|
+| Detect | 199 ms | 171 | 360 | YOLO26n @ 640×640, finds fruit + peduncle |
+| Classify | 62 ms | 42 | 169 | YOLO26n-cls @ 224×224, runs once per detected fruit (mean 4.9, max 39 fruits/image) |
+| **End-to-end per image** | **308 ms** | 235 | 618 | full pipeline incl. JPEG decode + crop + I/O |
+| **Total 1,000-image batch** | **5 min 13 sec wall-clock** | — | — | measured, not projected |
+
+**Headroom**: the Hailo accelerator on the AI HAT+ 2 is unused in these numbers. Once the Hailo path lands (Phase 5), per-image inference is expected to drop 5-10× further.
+
+## Thermal note (real, not a footnote)
+
+The Pi started the run at 63.7°C and finished at 73.0°C. The early-vs-late per-image timing shows a +33.5% drift — early windows averaged ~254 ms/image, late windows ~522 ms/image. Some of this is real thermal slowdown; some is content variance (images with 30+ fruits run the classifier 30 times, vs ~4 for typical images).
+
+`vcgencmd get_throttled` did not trigger a new throttle event during the run — i.e. no active throttling — but for sustained back-to-back batches a passive heatsink or 30mm fan on the AI HAT+ 2 would keep numbers consistent. For the stated 1,000-image use case as-is, the 30-minute budget holds with margin even if every image ran at the late-window pace (522 ms × 1000 = ~8.7 min, still well under 30).
 
 ## Accuracy (held-out test sets, NCNN FP32 — Pi inference matches PyTorch bit-for-bit on top-1)
 
@@ -67,13 +75,14 @@ The full ground-truth comparison report (Phase 4 evaluator) will quantify MAE an
 
 ## What's next
 
-1. Phase 5 Hailo backend (HEF export + on-device inference) — expected 5-10× speed-up on the same accuracy.
-2. Improvement plan in `reports/improvement_plan.md` ranks concrete levers; the highest-ROI one (inference resolution 640 → 960) is one Colab run and should bring peduncle and unripe mAP50 up materially.
+1. **Phase 5 Hailo backend** (HEF export + on-device inference) — expected 5-10× speed-up on the same accuracy. Currently bottlenecked on YOLO26 Hailo-10H DFC support; fallback to YOLO11n if needed.
+2. **Improvement plan** in `reports/improvement_plan.md` ranks concrete accuracy levers. The highest-ROI one — bumping detector inference resolution from 640 to 960 — is one Colab run away and should lift peduncle and unripe mAP50 by 3-8 points.
+3. **Phase 4 evaluator** (`src/evaluator.py`) — produces per-image MAE/Pearson on counts vs ground truth, which is the right way to translate mAP50 into "how good is the count?" for the deliverable.
 
 ---
 
-*Bench environment:* Pi 5 (4 cores @ 2.4 GHz, governor `ondemand`), temp 64-68°C during run, no active thermal throttling. Sticky `0x80000` historical-temp bit is from prior load (documented in Phase 2 notes), not a current concern.
+*Bench environment:* Pi 5 (4 cores @ 2.4 GHz, governor `ondemand`), temp 63.7°C → 73.0°C across the run, no active thermal throttling. Sticky `0x80000` historical-temp bit unchanged.
 
-*Data:* Zenodo 6126677 (detection val, 159 images), Kaggle usmanafzaal/strawberry-disease-detection-dataset + Roboflow research-proj/strawberry-diseases-detection v1 (cls test, 1,463 crops).
+*Data:* Zenodo 6126677 (detection val + 1k batch source), Kaggle usmanafzaal/strawberry-disease-detection-dataset + Roboflow research-proj/strawberry-diseases-detection v1 (cls test, 1,463 crops), Roboflow matt-lucky-ripeness (1k batch top-up).
 
-*Reproducibility:* See `docs/cursor-phase3-cls-bench.md` for the one-shot Pi bench. CSVs at `reports/disease_test_eval*.{csv,json}` (cls) and `reports/detect_val_eval_summary.json` (detection).
+*Reproducibility:* `docs/cursor-phase3-cls-bench.md` (cls bench on Pi), `docs/cursor-phase3-1k-batch.md` (1k batch on Pi). Per-image CSVs at `reports/disease_test_eval*.{csv,json}` (cls) and `reports/inference_cpu_1k.csv` (1k batch, Pi-resident).
