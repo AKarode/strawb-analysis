@@ -18,9 +18,11 @@ runs/
 *.ncnn.param
 *_ncnn_model/
 
-# Outputs
+# Outputs — regenerable artifacts (CSVs, JSON, plots) stay local;
+# planning docs (.md) and bench summaries are tracked.
 reports/**
 !reports/.gitkeep
+!reports/**/*.md
 *.csv
 
 # Runtime logs (Hailo PCIe driver writes hailort.log into cwd on the Pi)
