@@ -175,6 +175,59 @@ The two-stage pipeline in plain English:
 2. Each rectangle is cropped → classifier looks at just that fruit → "this one is healthy, this one has gray_mold."
 3. Write all of that to one row of the output CSV.
 
+## Q: Can we use non-RGB imagery (multispectral, thermal, etc.)?
+
+**Short answer**: yes, but it's a real scope expansion — not a switch-flip. There's a fork to surface for Anand.
+
+### What "non-RGB" typically means in ag
+
+| Type | What it captures | Common ag use | Camera cost |
+|---|---|---|---|
+| Multispectral (R, G, B, NIR, Red-edge) | Visible + near-IR + stress signal | NDVI / NDRE for plant stress, water status, early disease | $3.5k-10k (MicaSense, Parrot Sequoia) |
+| Thermal / LWIR | 8-14 μm heat radiation | Water stress, canopy temperature, irrigation tuning | $1.5k-3k (FLIR Vue, Workswell) |
+| Hyperspectral (100+ narrow bands) | Fine-grained spectral signatures | Sugar content, anthocyanin, specific compounds | $20k+ (research-grade) |
+| NIR-only single band | Near-infrared 700-1000nm | Cheap proxy for NDVI | $200-500 |
+
+For a winery client specifically, **multispectral for NDVI / canopy stress** is the most common ask.
+
+### What works as-is (cheap add)
+
+**NDVI and similar vegetation indices don't need ML.** They're math on spectral bands:
+
+```
+NDVI = (NIR - Red) / (NIR + Red)
+```
+
+If the request is "give me NDVI heatmaps," that's a **1-week add** to the pipeline: read multispectral input, compute indices per pixel, emit a heatmap. No new training, no new datasets.
+
+### What needs real work (ML on multispectral)
+
+| Item | Effort |
+|---|---|
+| Modify YOLO architecture to accept N input channels | ~1 week |
+| Find or commission multispectral training dataset | **Big variable** — public multispectral strawberry/grape datasets are rare. 2 weeks to find one, or 2 months to commission. |
+| Retrain detector + classifier on multispectral | 1-2 weeks |
+| Re-export to NCNN for Pi | 1-2 days |
+| **Total** | **3-8 weeks**, gated on dataset availability |
+
+The bottleneck is data, not architecture. RGB strawberry/grape data is plentiful; multispectral data is genuinely scarce.
+
+### Three questions to ask Anand on the call
+
+1. **"What kind of non-RGB — multispectral (NDVI), thermal, or hyperspectral?"** Wildly different effort profiles.
+2. **"Do you have or are you sourcing the camera, or are we picking it?"** Constrains the rest of the pipeline ($1.5k-20k camera range).
+3. **"Is the goal a new signal (NDVI as an additional output) or replacing the RGB pipeline with multispectral inputs?"** Adding a signal is cheap (~1 week); replacing is 3-8 weeks.
+
+### One-line answer for the call
+
+> "The architecture is multispectral-portable — YOLO can take any number of input channels, and the Pi can absolutely process multispectral imagery. The two real gates are camera cost and training data. NDVI-style vegetation indices don't need ML at all and are a 1-week add. ML on multispectral input — detecting diseases earlier via the red-edge band — is 3-8 weeks depending on dataset availability."
+
+### Don't oversell
+
+- Don't promise "multispectral works out of the box." Current weights are RGB-only.
+- Don't promise to find a multispectral dataset until you've actually searched — could require commissioning new labels.
+- Don't blur the line between "NDVI as a math output" (cheap) and "ML on multispectral input" (expensive). Very different conversations.
+
 ## Q: How does this translate to a winery client?
 
 **Headline**: about 80% of the work moves over directly. The 20% that doesn't is the part you'd expect — different visual domain means different training data and different class labels. Realistic translation timeline: **3-5 weeks** to a winery-equivalent deliverable.
