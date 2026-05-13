@@ -160,6 +160,21 @@ Anand might press on weaknesses. Honest answers:
 
 vs cloud GPU inference: ~$0.50-2/hour, but requires connectivity (no offline ops).
 
+## Q: Do I need to label my photos before processing?
+
+**No.** Critical clarification — Anand may ask this and the answer is fundamental:
+
+- **Labels (bboxes, polygons) are only needed for *training*.** That step is done. We used public datasets (Zenodo, Kaggle Afzaal, Roboflow) that came pre-labeled, and trained the models on those.
+- **At inference (production), photos come in raw — no labels, no annotations.** The detector generates its own bboxes from scratch: "I see a ripe strawberry here, at this rectangle, with 92% confidence." The classifier then predicts the disease for each detected fruit. Output is the per-image CSV.
+- The Phase 4 evaluator (`src/evaluator.py`) does use labels, but only for **measuring accuracy** against 159 Zenodo val images. Once Anand deploys, no comparison happens — just predictions go out.
+
+**One caveat to mention if pressed**: if his field photos look drastically different from our training data (different lighting, camera angle, growth stage, strawberry variety), accuracy could drop. The fix is a small **fine-tuning pass**: label ~100-200 photos from his actual fields, retrain for a day, deploy the adjusted weights. Standard practice. Not needed unless we observe a real drop on his data.
+
+The two-stage pipeline in plain English:
+1. Photo of strawberry field → detector finds every fruit + draws a rectangle around each → "5 strawberries here."
+2. Each rectangle is cropped → classifier looks at just that fruit → "this one is healthy, this one has gray_mold."
+3. Write all of that to one row of the output CSV.
+
 ## Q: How does this translate to a winery client?
 
 **Headline**: about 80% of the work moves over directly. The 20% that doesn't is the part you'd expect — different visual domain means different training data and different class labels. Realistic translation timeline: **3-5 weeks** to a winery-equivalent deliverable.
