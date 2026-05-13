@@ -160,6 +160,55 @@ Anand might press on weaknesses. Honest answers:
 
 vs cloud GPU inference: ~$0.50-2/hour, but requires connectivity (no offline ops).
 
+## Q: How does this translate to a winery client?
+
+**Headline**: about 80% of the work moves over directly. The 20% that doesn't is the part you'd expect — different visual domain means different training data and different class labels. Realistic translation timeline: **3-5 weeks** to a winery-equivalent deliverable.
+
+### What transfers with zero modification
+
+- **Architecture**: detector → per-instance crop → classifier → per-image CSV → evaluator. This is the standard agricultural CV pattern and works for any "find objects + assess each object" task — grape bunches, apples, lettuce heads, anything.
+- **Pi deployment stack**: NCNN export, Pi 5 + AI HAT+ 2 hardware, the whole "offline batch inference at 5+× under budget" story holds. Speed numbers translate directly because they're measured on this hardware, not on this dataset.
+- **All tooling**: training scripts (`train_detect.py`, `train_disease.py`), NCNN export scripts, Pi bench scripts, count evaluator, integrated pipeline. Just point at different data + classes.
+- **Drone integration approach**: GPS sync, photogrammetry, geo-tagged detections — identical workflow.
+- **Hailo 5-10× headroom story**: same hardware, same speed ceiling.
+- **PR + audit infrastructure**: manifest builder, per-source LICENSE tracking, dedup audit pattern. Reusable governance.
+
+### What needs new work
+
+- **Training datasets** — strawberry weights don't transfer to grapes (different color, shape, occlusion patterns, cluster structure). Need grape-specific data.
+- **Class labels** — wineries care about different things: bunch counts, disease (powdery mildew, downy mildew, botrytis bunch rot, esca, leafroll virus, black rot — overlapping with grape disease taxonomy), maturity / phenology stage (flowering, fruit set, veraison, harvest-ready), pruning indicators.
+- **Detection granularity decision** — most grape datasets label *bunches* not individual berries. Whether the winery wants bunch counts or berry-per-bunch counts is a scoping conversation. Bunch counts are way easier; per-berry counts inside a bunch are a harder research problem because of 3D occlusion.
+
+### Available grape datasets (rough recall — verify before quoting)
+
+- **WGISD (Wine Grape Instance Segmentation Dataset)** — Embrapa, ~300 images across 5 grape varieties with instance masks for bunches. CC-BY 4.0. Most directly comparable to our Zenodo source.
+- **PlantVillage grape subset** — disease classification, 4 classes: Black rot, Esca (Black Measles), Leaf blight (Isariopsis Leaf Spot), healthy. Strong analog to our Kaggle Afzaal disease source.
+- **Roboflow Universe** has multiple vineyard / grape detection sets of varying quality.
+- **Embrapa Vineyard datasets** beyond WGISD — sometimes paired with multispectral.
+- Many viticulture research papers publish datasets that aren't on the main hubs — would do a focused search before scoping.
+
+### Translation timeline (Phase-by-Phase, same playbook)
+
+| Phase | Strawberry effort | Grape estimate | Notes |
+|---|---|---|---|
+| 1. Data prep + manifest | ~3 weeks | **1-2 weeks** | Reuse scripts; download new datasets; build manifest. Same governance pattern. |
+| 2. Detection (bunch + maybe leaf/flower) | ~1 week | **1 week** | Identical training pipeline; just different class set + dataset. |
+| 3. Disease classification | ~2 weeks | **1-2 weeks** | PlantVillage grape data is well-curated; should converge faster than strawberry did. |
+| 4. Integrated pipeline + evaluator | ~3 days | **<1 day** | Pipeline code unchanged; swap weights. |
+| 5. Hailo backend | deferred | deferred / same | Same DFC story; not blocking. |
+| **Total to v1 winery deliverable** | | **3-5 weeks** | Tight scope, single playbook execution. |
+
+### Winery-specific things to flag (or not)
+
+- **Wineries care more about quality than count.** A grape grower wants yield estimation, but a winery downstream is more interested in fruit quality (brix, anthocyanin, disease pressure). Pure CV is one input among several (refractometer readings, lab analysis). Frame the deliverable as "automated visual triage that reduces hours of scouting" rather than "replaces the field manager."
+- **Multispectral / NDVI is more common in viticulture than strawberry.** Vineyard PA (precision agriculture) often uses NIR/red-edge bands for canopy stress / water status. If the winery wants that, our "RGB-only" stance becomes a v1 limitation; we'd plan v2 with a multispectral camera. **Worth asking Anand directly: is the camera spec RGB or multispectral?**
+- **Phenology tracking is a v2+ ask.** Knowing when veraison happens at a per-vine level is high-value but requires temporal data (same vine, multiple flyovers), not just classification.
+- **Variety-specific models.** Cabernet looks different from Chardonnay. Either train per-variety or train a general model with variety conditioning. Most published work goes per-variety. WGISD has 5 varieties as separate splits — directly usable.
+
+### One-line answer if Anand presses
+
+> "The whole stack — training, deployment, drone integration, the Pi + Hailo story — is winery-portable. The strawberry-specific bits are the training data and the class labels. We'd expect 3-5 weeks to land a winery-equivalent v1, using public grape datasets like WGISD and PlantVillage as the analog of what Zenodo and Kaggle gave us here. The biggest scoping question is whether the deliverable counts bunches or assesses berry-level detail — those are different effort levels."
+
 ## Things to NOT say on the call
 
 - "Hailo is broken / didn't work" — it works, we just didn't need it.
